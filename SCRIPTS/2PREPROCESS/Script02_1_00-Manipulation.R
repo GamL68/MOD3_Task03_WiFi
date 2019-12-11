@@ -1,9 +1,3 @@
-#### Set ID to join the various tables to the main table.###############
-
-# --- ID Field 
-df$ID <- seq.int(nrow(df))
-df$ID<- as.character(df$ID)
-
 ########################################################################
 # Once the ID is created we can build new dataframes containing any new
 # field for exploration purposes
@@ -21,10 +15,23 @@ df$ID<- as.character(df$ID)
 
 ########################################################################
 # PLAN OF ATTACK:
-# Check Data Types, missing values
+# Create Specialized dfs
 # Drop any unnecessary field
 # Categorical data: create count tables to understand different categories.
-# Failed access imputation (gather and spread, calculate Max, min valid and invalid accesses)
+# Failed access imputation (gather and spread, calculate Max, Min, Valid and Invalid accesses)
+########################################################################
+
+#### GENERATE ID
+# Set ID to join the various tables to the main table.###############
+
+# --- ID Field 
+
+if("ID" %in% colnames(df)){
+  df<-df
+}else{
+  df$ID <- seq.int(nrow(df))
+  df$ID<- as.character(df$ID)
+}
 ########################################################################
 # --- Headers: Transposed list of column names
 headers_lst<- list(colnames(df))
@@ -36,7 +43,8 @@ rm(headers_lst)
 
 ################################################################
 # --- WAP: Complete Set of WAPS
-eda_wap_df<-df %>% select(ID)
+eda_wap_df<-df %>% select("ID")
+
 eda_wap_df<-cbind(eda_wap_df,df %>% select(starts_with("WAP")))
 
 # Calculating Column Max Values
@@ -76,16 +84,16 @@ wap_details_df<-cbind(wap_details_df,wap_trnsp_df$MAX,wap_trnsp_df$MIN)
 colnames(wap_details_df) <- c("WAP","MAX","MIN")
 
 # Total Tries
-wap_details_df$Tot_Tries<-apply(df[1:466], 2, function(x) sum(x<0))
+wap_details_df$Tot_Tries<-apply(df[1:464], 2, function(x) sum(x<0))
 
 # Total Valid
-wap_details_df$Tot_Valid<-apply(df[1:466],2,function(x)sum(x != -110))
+wap_details_df$Tot_Valid<-apply(df[1:464],2,function(x)sum(x != -110))
 
 # Total Invalid
-wap_details_df$Tot_Invalid<-apply(df[1:466],2,function(x)sum(x == -110))
+wap_details_df$Tot_Invalid<-apply(df[1:464],2,function(x)sum(x == -110))
 
 # Total Within range -95
-wap_details_df$Tot_Upper_Range<-apply(df[1:466],2,function(x)sum(x>-95))
+wap_details_df$Tot_Upper_Range<-apply(df[1:464],2,function(x)sum(x>-95))
 
 colnames(wap_details_df) <-c("WAP","MAX", "MIN","TOT","VALID","INVALID","URANGE")
 
@@ -99,13 +107,13 @@ wap_details_df %>% select(VALID) %>% group_by(VALID) %>% summarise(n=n()) %>% fi
 # --- Accesses: Contains info on accesses, MAX, MIN, VALID, INVALID, TOT TRIES ...
 eda_accessed_df<-df %>% select(ID)
 # Total WAP access tries by Row
-eda_accessed_df$Accesses<-apply(df[1:465], 1, function(x) sum(x>-110))
+eda_accessed_df$Accesses<-apply(df[1:464], 1, function(x) sum(x>-110))
 # Total valid WAP access by Row
-eda_accessed_df$Valid<-apply(df[1:465],1,function(x)sum(x!=-110))
+eda_accessed_df$Valid<-apply(df[1:464],1,function(x)sum(x!=-110))
 # rowSums(eda_wap_df!=-110)
 
 # Total invalid WAP access by Row
-eda_accessed_df$Invalid<-apply(df[1:465],1,function(x)sum(x==-110))
+eda_accessed_df$Invalid<-apply(df[1:464],1,function(x)sum(x==-110))
 # --- MAX and MIN Values
 # MAX WAP
 # 1 indicates manipulation done in rows
@@ -115,8 +123,6 @@ eda_accessed_df$MAX_WAP<-apply(eda_wap_df[,-1], 1, FUN = function(x) {max(x[x])}
 # MIN WAP
 # Find minimum value per row excluding -110. These are the WAPS that have picked up a signal.
 # The value of -95 was changed after insight activity
-
-
 
 eda_accessed_df$MIN_WAP<-apply(eda_wap_df[,-1], 1, FUN = function(x) {min(x[x>-95])})
 # Replace Infinite values
@@ -130,14 +136,16 @@ eda_accessed_df<-eda_accessed_df %>% filter(MIN_WAP>=(-95)) # 19220 accesses
 # The value to be kept is -95
 # I would not set just yet an upper limit
 
-# (MIN_WAP !=-110 & MAX_WAP!=-110)
+# Add the Long and LAT columns
+eda_accessed_df<-cbind(eda_accessed_df,df$LONGITUDE,df$LATITUDE)
 
 # Create a new dataset with only the valid WAPS
 base_df<-df %>%
   filter(ID %in% eda_accessed_df$ID)
 
 #################################################################################
-
+#### QUALITATIVE DF
+# New reference df is base_df
 # --- QNT: Contains all quantative vars
 eda_qnt_df<-base_df %>% select(ID)
 eda_qnt_df$BUILDINGID<-base_df$BUILDINGID

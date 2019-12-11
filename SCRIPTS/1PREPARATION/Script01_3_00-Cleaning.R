@@ -6,9 +6,8 @@
 # Change 100 values to -110
 # Check for Duplicate Vars
 # Check Zero and Near Zero Variance
-# Check Data Types, missing values
+# Check Data Types
 # Check for Missing Values
-# Drop any unnecessary field (i.e WAPS containing only -110 values)
 #############################################################################
 
 #### HEADINGS -----------------------------------------------------------
@@ -98,7 +97,6 @@ if (na_test == TRUE) {
 }
 
 rm(na_test)
-na_test
 #############################################################################
 # DROP UNUSED COLUMNS
 # Instead of deleting transfer it to a new df
@@ -118,16 +116,9 @@ df <- df %>% rename(POSITIONID=RELATIVEPOSITION,
                     FLOORID=FLOOR)
 
 #############################################################################
+# Create MAX value column
+df$MAX<-apply(df[1:465],1,function(x) {max(x)})
+
 # Drop any unnecessary field (i.e WAPS containing only -110 values)
-# Rows with only -110 values
-df$rMAX<-apply(df[1:466],1,function(x) {max(x)})
-df$rMIN<-apply(df[1:466],1,function(x) {min(x> -110)})
-
-# Cols with only -110 values
-cMAX<-apply(df[1:466],2,function(x) max(x))
-cMIN<-apply(df[1:466],2,function(x) min(x[x>-95]))
-
-# Get Max value for accessed_df
-WAPS<-grep("WAP", names(df), value=T)
-df$MAX<-sapply(df[,WAPS],function(x) max(x))
-df$MIN<-sapply(df[,WAPS],function(x) min(x>-110))
+df<-df %>% 
+  filter(MAX>-95)
