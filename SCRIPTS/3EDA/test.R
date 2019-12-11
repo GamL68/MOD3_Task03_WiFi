@@ -1,4 +1,199 @@
-1575646367152:signal=final_wap_df$MAX_WAP
+1575645097635:which(colnames(wifi_df)=="LATITUDE")
+1575645098131:which(colnames(wifi_df)=="FLOOR")
+1575645100546:temp<-cbind(wap_df,wifi_df[,c(466,467,468,478,490)])
+1575645109919:head(temp)
+1575645159473:temp<-cbind(wap_df,wifi_df[,c(466,467,468,478,490),-"ID"])
+1575645176835:temp<-cbind(wap_df,wifi_df[,c(466,467,468,478,490,-"ID")])
+1575645183460:temp<-cbind(wap_df,wifi_df[,c(466,467,468,478,490,-1)])
+1575645213289:temp<-cbind(wap_df[,2:465],wifi_df[,c(466,467,468,478,490)])
+1575645236488:head(temp)
+1575645266357:# Gather all WAP Accesses in long form
+  1575645266357:signal_WAP_df<-gather(temp,key=WAP,value=MAX_WAP,c(-SIGNAL_QUALITY,-LATITUDE,-LONGITUDE,-FLOOR),na.rm=TRUE)
+1575645268043:# Remove the temporary dataframe
+  1575645268044:rm("temp")
+1575645269212:# --- Filter only Valid Access Signals
+  1575645269212:valid_signal_WAP_df <-signal_WAP_df %>%
+  1575645269213:filter(MAX_WAP > -100)
+1575645270436:# --- View the Values
+  1575645270436:valid_signal_WAP_df %>%
+  1575645270437:dplyr::select(WAP, MAX_WAP) %>%
+  1575645270437:group_by(MAX_WAP) %>%
+  1575645270438:dplyr::summarise(num=n()) %>%
+  1575645270438:ggplot(aes(MAX_WAP, num))+
+  1575645270438:geom_histogram(stat="identity")
+1575645283916:valid_signal_WAP_df %>%
+  1575645283916:dplyr::select(WAP, MAX_WAP) %>%
+  1575645283917:# group_by(MAX_WAP) %>%
+  1575645283917:dplyr::summarise(num=n())
+1575645295802:# --- Find upper and lower Whisker values
+  1575645295802:bp<-boxplot(valid_signal_WAP_df$MAX_WAP)$stats[c(1, 5), ] # -99 -43
+1575645297346:# Access lower whisker
+  1575645297347:upw<-bp[1]
+1575645298691:# Access upper whisker
+  1575645298692:lww<-bp[2]
+1575645300225:# --- Total Number of valid string access above upper whisker
+  1575645300226:valid_signal_WAP_df %>%
+  1575645300226:dplyr::select(WAP, MAX_WAP) %>%
+  1575645300227:group_by(MAX_WAP) %>%
+  1575645300227:filter(between(MAX_WAP,lww,-1)) %>%
+  1575645300227:dplyr::summarise(num=n())%>%
+  1575645300228:ggplot(aes(MAX_WAP, num))+
+  1575645300228:geom_bar(stat="identity")
+1575645312411:valid_signal_WAP_df %>%
+  1575645312412:dplyr::select(WAP, MAX_WAP) %>%
+  1575645312412:#group_by(MAX_WAP) %>%
+  1575645312413:filter(between(MAX_WAP,lww,-1)) %>%
+  1575645312413:dplyr::summarise(num=n())
+1575645319299:# --- Plot adjusting the value of the lower limit
+  1575645319300:#From this we see that the consistent limit is around -34
+  1575645319300:obs_upw = -33
+1575645320257:obs_lww = -95
+1575645321238:valid_signal_WAP_df %>%
+  1575645321238:dplyr::select(WAP, MAX_WAP) %>%
+  1575645321239:group_by(MAX_WAP) %>%
+  1575645321239:filter(between(MAX_WAP,obs_upw,-1)) %>%
+  1575645321239:dplyr::summarise(num=n())
+1575645328562:valid_signal_WAP_df %>%
+  1575645328563:dplyr::select(WAP, MAX_WAP) %>%
+  1575645328563:#group_by(MAX_WAP) %>%
+  1575645328563:filter(between(MAX_WAP,obs_upw,-1)) %>%
+  1575645328564:dplyr::summarise(num=n())
+1575645333377:# --- Detect Q1 and Q3 values
+  1575645333377:quantile(valid_signal_WAP_df$MAX_WAP, c(0.25, .75))
+1575645335116:valid_signal_WAP_df %>%
+  1575645335117:dplyr::select(WAP, MAX_WAP) %>%
+  1575645335117:group_by(MAX_WAP) %>%
+  1575645335117:filter(between(MAX_WAP,obs_lww,obs_upw)) %>%
+  1575645335118:dplyr::summarise(num=n())%>%
+  1575645335118:ggplot(aes(MAX_WAP, num))+
+  1575645335119:geom_bar(stat="identity")
+1575645336940:# --- Check if any column has only -95
+  1575645336940:drop<-wap_df[sapply(wap_df, function(x) max(x) <= -96)] # 22 columns
+1575645337801:drop1<-wap_df[sapply(wap_df, function(x) max(x) >= -32)] # 78 columns
+1575645338597:# Creating a character vector named drop in which we are storing
+  1575645338598:# column names.
+  1575645338598:drop<-names(drop)
+1575645339091:drop1<-names(drop1)
+1575645340055:# Later we are telling R to select all the variables except the column names specified in the vector drop.
+  1575645340056:# The function names() returns all the column names and the '!' sign indicates negation.
+  1575645340057:res<-wap_df[ ,!names(wap_df) %in% drop]
+1575645340688:final_wap_df<-res[ ,!names(res) %in% drop1]
+1575645342428:# Remove temporary dataframes
+  1575645342428:rm(drop,drop1,res)
+1575645343594:# A faster way is to use the digest library, transposing is expensive
+  1575645343595:library(digest)
+1575645344345:dup_col <- duplicated(sapply(final_wap_df, digest))
+1575645344898:dup_col_df<- final_wap_df[,which(!dup_col)]
+1575645345867:# Recreate the columns MAX_WAP and SIGNAL_QUALITY with new data WAP range
+  1575645345868:final_wap_df$MAX_WAP<-apply(final_wap_df, 1, FUN = function(x) {max(x[x])})
+1575645346713:# New Signal_Quality
+  1575645346714:signal=final_wap_df$MAX_WAP
+1575645347418:EoF<-nrow(wifi_df)
+1575645348683:final_wap_df$SIGNAL_QUALITY<-0
+1575645349627:for (i in  1:EoF) {
+  1575645349629:if (signal[i] <= -1 & signal[i] >= -50) {
+    1575645349629:final_wap_df$SIGNAL_QUALITY[i]<-10  # Excellent
+    1575645349630:} else if (signal[i] <= -51 & signal[i] >= -60) {
+      1575645349630:final_wap_df$SIGNAL_QUALITY[i]<-8   # Good
+      1575645349630:} else if (signal[i] <= -61 & signal[i] >= -70) {
+        1575645349631:final_wap_df$SIGNAL_QUALITY[i]<-6   # Fair
+        1575645349631:} else if (signal[i] <= -71 & signal[i] >= -90) {
+          1575645349632:final_wap_df$SIGNAL_QUALITY[i]<-5   # Poor
+          1575645349632:} else if (signal[i] <= -91 & signal[i] >= -104) {
+            1575645349632:final_wap_df$SIGNAL_QUALITY[i]<-3   # No signal
+            1575645349632:} else {
+              1575645349632:final_wap_df$SIGNAL_QUALITY[i] <- 1 # No access
+              1575645349633:}
+  1575645349633:}
+1575645380076:# Add Longitude, Lat and Floor from the df dataset
+  1575645380077:base_df<-cbind(final_wap_df, wifi_df[,c(466,467,468,469,470,471,472,473,474)])
+1575645388497:names(base_df)
+1575645469641:tail(names(wifi_df),30)
+1575645686994:rm(signal)
+1575645688489:rm(EoF)
+1575645748675:# New Signal_Quality
+  1575645748676:signal=final_wap_df$MAX_WAP
+1575645749409:EoF<-nrow(wifi_df)
+1575645750241:final_wap_df$SIGNAL_QUALITY<- 1
+1575645752003:for (i in  1:EoF) {
+  1575645752003:if (signal[i] <= -1 & signal[i] >= -50) {
+    1575645752004:final_wap_df$SIGNAL_QUALITY[i]<-10  # Excellent
+    1575645752004:} else if (signal[i] <= -51 & signal[i] >= -60) {
+      1575645752004:final_wap_df$SIGNAL_QUALITY[i]<-8   # Good
+      1575645752005:} else if (signal[i] <= -61 & signal[i] >= -70) {
+        1575645752005:final_wap_df$SIGNAL_QUALITY[i]<-6   # Fair
+        1575645752005:} else if (signal[i] <= -71 & signal[i] >= -90) {
+          1575645752006:final_wap_df$SIGNAL_QUALITY[i]<-5   # Poor
+          1575645752006:} else if (signal[i] <= -91 & signal[i] >= -104) {
+            1575645752007:final_wap_df$SIGNAL_QUALITY[i]<-3   # No signal
+            1575645752007:} else {
+              1575645752007:final_wap_df$SIGNAL_QUALITY[i] <- 1 # No access
+              1575645752008:}
+  1575645752008:}
+1575645756163:for (i in 1:EoF) {
+  1575645756164:if (signal[i] <= -1 & signal[i] >= -50) {
+    1575645756164:final_wap_df$QUALITY_DESC[i]<-"Excellent"
+    1575645756165:} else if (signal[i] <= -51 & signal[i] >= -60) {
+      1575645756165:final_wap_df$QUALITY_DESC[i]<-"Good"
+      1575645756165:} else if (signal[i] <= -61 & signal[i] >= -70) {
+        1575645756166:final_wap_df$QUALITY_DESC[i]<-"Fair"
+        1575645756166:} else if (signal[i] <= -71 & signal[i] >= -90) {
+          1575645756167:final_wap_df$QUALITY_DESC[i]<-"Poor"
+          1575645756167:} else if (signal[i] <= -91 & signal[i] >= -104) {
+            1575645756167:final_wap_df$QUALITY_DESC[i]<-"No_Signal"
+            1575645756168:} else {
+              1575645756168:final_wap_df$QUALITY_DESC[i] <-"Failed_Access"
+              1575645756168:}
+  1575645756169:}
+1575645794345:final_wap_df$QUALITY_DESC<- "Failed_Access"
+1575645795092:for (i in 1:EoF) {
+  1575645795093:if (signal[i] <= -1 & signal[i] >= -50) {
+    1575645795094:final_wap_df$QUALITY_DESC[i]<-"Excellent"
+    1575645795094:} else if (signal[i] <= -51 & signal[i] >= -60) {
+      1575645795095:final_wap_df$QUALITY_DESC[i]<-"Good"
+      1575645795096:} else if (signal[i] <= -61 & signal[i] >= -70) {
+        1575645795096:final_wap_df$QUALITY_DESC[i]<-"Fair"
+        1575645795097:} else if (signal[i] <= -71 & signal[i] >= -90) {
+          1575645795097:final_wap_df$QUALITY_DESC[i]<-"Poor"
+          1575645795098:} else if (signal[i] <= -91 & signal[i] >= -104) {
+            1575645795098:final_wap_df$QUALITY_DESC[i]<-"No_Signal"
+            1575645795098:} else {
+              1575645795099:final_wap_df$QUALITY_DESC[i] <-"Failed_Access"
+              1575645795099:}
+  1575645795100:}
+1575645818601:tail(names(final_wap_df),27)
+1575645882106:tail(names(wifi_df),27)
+1575645911368:which(colnames(wifi_df)=="LONGITUDE")
+1575646216687:which(colnames(wifi_df)=="LONGITUDE")
+1575646218674:which(colnames(wifi_df)=="LATITUDE")
+1575646218976:which(colnames(wifi_df)=="FLOOR")
+1575646219218:which(colnames(wifi_df)=="BUILDINGID")
+1575646219457:which(colnames(wifi_df)=="SPACEID")
+1575646219649:which(colnames(wifi_df)=="POSITIONID")
+1575646219826:which(colnames(wifi_df)=="USERID")
+1575646220002:which(colnames(wifi_df)=="PHONEID")
+1575646220178:which(colnames(wifi_df)=="ID")
+1575646220352:which(colnames(wifi_df)=="Tot_Tries")
+1575646220529:which(colnames(wifi_df)=="Tot_Valid")
+1575646220706:which(colnames(wifi_df)=="Tot_Invalid")
+1575646221217:which(colnames(wifi_df)=="char_FLOOR")
+1575646221410:which(colnames(wifi_df)=="char_FLOOR")
+1575646221586:which(colnames(wifi_df)=="char_BUILDINGID")
+1575646221777:which(colnames(wifi_df)=="char_POSITIONID")
+1575646222114:which(colnames(wifi_df)=="char_SPACEID")
+1575646222290:which(colnames(wifi_df)=="ZoneId")
+1575646222465:which(colnames(wifi_df)=="char_ZoneID")
+1575646222657:which(colnames(wifi_df)=="LocID")
+1575646222833:which(colnames(wifi_df)=="char_LocID")
+1575646223025:which(colnames(wifi_df)=="ItemID")
+1575646223202:which(colnames(wifi_df)=="char_ItemID")
+1575646223634:which(colnames(wifi_df)=="COORD_POINT")
+1575646307356:which(colnames(wifi_df)=="ZoneID")
+1575646361377:# Recreate the columns MAX_WAP and SIGNAL_QUALITY with new data WAP range
+  1575646361378:final_wap_df$MAX_WAP<-apply(final_wap_df, 1, FUN = function(x) {max(x[x])})
+1575646366971:final_wap_df$MIN_WAP<-apply(wap_df[,-1], 1, FUN = function(x) {min(x[x<-104])})
+1575646367151:# New Signal_Quality
+  1575646367152:signal=final_wap_df$MAX_WAP
 1575646367152:EoF<-nrow(wifi_df)
 1575646367152:final_wap_df$SIGNAL_QUALITY<- 1
 1575646367153:for (i in  1:EoF) {

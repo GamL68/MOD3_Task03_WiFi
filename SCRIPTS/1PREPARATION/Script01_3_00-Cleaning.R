@@ -122,3 +122,6 @@ df$MAX<-apply(df[1:465],1,function(x) {max(x)})
 # Drop any unnecessary field (i.e WAPS containing only -110 values)
 df<-df %>% 
   filter(MAX>-95)
+
+# Change any 0 value to -1 for division calculus
+df$MAX<-sapply(df[,MAX],function(x) ifelse(x==0,-1,x))
